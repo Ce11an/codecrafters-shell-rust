@@ -23,6 +23,9 @@ fn main() {
                 }
             }
             println!("Invalid exit command format");
+        } else if command.starts_with("echo ") {
+            let echo_output = &command[5..];
+            println!("{}", echo_output);
         } else {
             println!("{}: command not found", command);
         }

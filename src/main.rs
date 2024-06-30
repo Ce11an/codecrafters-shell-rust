@@ -1,4 +1,5 @@
 use std::io::{self, Write};
+use std::process;
 
 fn main() {
     loop {
@@ -14,8 +15,16 @@ fn main() {
 
         if command.is_empty() {
             continue;
+        } else if command.starts_with("exit ") {
+            let parts: Vec<&str> = command.split_whitespace().collect();
+            if parts.len() == 2 {
+                if let Ok(code) = parts[1].parse::<i32>() {
+                    process::exit(code);
+                }
+            }
+            println!("Invalid exit command format");
+        } else {
+            println!("{}: command not found", command);
         }
-
-        println!("{}: command not found", command);
     }
 }

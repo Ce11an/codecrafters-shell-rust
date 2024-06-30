@@ -17,6 +17,7 @@ fn main() {
             cmd if cmd.starts_with("exit ") => handle_exit_command(cmd),
             cmd if cmd.starts_with("echo ") => handle_echo_command(cmd),
             cmd if cmd.starts_with("type ") => handle_type_command(cmd),
+            cmd if cmd.starts_with("cd ") => handle_cd_command(cmd),
             "pwd" => handle_pwd_command(),
             _ => execute_command(&command),
         }
@@ -38,12 +39,13 @@ fn read_command() -> String {
 
 fn handle_exit_command(command: &str) {
     let parts: Vec<&str> = command.split_whitespace().collect();
-    if parts.len() == 2 {
-        if let Ok(code) = parts[1].parse::<i32>() {
-            std::process::exit(code);
-        }
+    if parts.len() != 2 {
+        println!("Invalid exit command format");
+        return;
     }
-    println!("Invalid exit command format");
+    if let Ok(code) = parts[1].parse::<i32>() {
+        std::process::exit(code);
+    }
 }
 
 fn handle_echo_command(command: &str) {
@@ -53,21 +55,22 @@ fn handle_echo_command(command: &str) {
 
 fn handle_type_command(command: &str) {
     let parts: Vec<&str> = command.split_whitespace().collect();
-    if parts.len() == 2 {
-        let cmd_to_check = parts[1];
-
-        if BUILTINS.contains(&cmd_to_check) {
-            println!("{} is a shell builtin", cmd_to_check);
-            return;
-        }
-
-        if let Some(path) = find_executable_in_path(cmd_to_check) {
-            println!("{} is {}", cmd_to_check, path.display());
-        } else {
-            println!("{}: not found", cmd_to_check);
-        }
-    } else {
+    if parts.len() != 2 {
         println!("Invalid type command format");
+        return;
+    }
+
+    let cmd_to_check = parts[1];
+
+    if BUILTINS.contains(&cmd_to_check) {
+        println!("{} is a shell builtin", cmd_to_check);
+        return;
+    }
+
+    if let Some(path) = find_executable_in_path(cmd_to_check) {
+        println!("{} is {}", cmd_to_check, path.display());
+    } else {
+        println!("{}: not found", cmd_to_check);
     }
 }
 
@@ -80,6 +83,19 @@ fn handle_pwd_command() {
         }
     } else {
         eprintln!("Failed to get current directory");
+    }
+}
+
+fn handle_cd_command(command: &str) {
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    if parts.len() != 2 {
+        println!("Invalid cd command format");
+        return;
+    }
+
+    let new_dir = parts[1];
+    if let Err(_) = env::set_current_dir(new_dir) {
+        eprintln!("cd: {}: No such file or directory", new_dir);
     }
 }
 

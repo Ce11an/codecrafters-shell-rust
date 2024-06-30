@@ -93,8 +93,20 @@ fn handle_cd_command(command: &str) {
         return;
     }
 
-    let new_dir = parts[1];
-    if let Err(_) = env::set_current_dir(new_dir) {
+    let new_dir = if parts[1] == "~" {
+        env::var("HOME").unwrap_or_else(|_| {
+            eprintln!("cd: HOME environment variable not set");
+            return String::new();
+        })
+    } else {
+        parts[1].to_string()
+    };
+
+    if new_dir.is_empty() {
+        return;
+    }
+
+    if let Err(_) = env::set_current_dir(&new_dir) {
         eprintln!("cd: {}: No such file or directory", new_dir);
     }
 }

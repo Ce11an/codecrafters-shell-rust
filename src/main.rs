@@ -1,7 +1,5 @@
 use std::env;
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
-use std::process;
 
 const BUILTINS: [&str; 3] = ["echo", "exit", "type"];
 
@@ -19,7 +17,7 @@ fn main() {
             cmd if cmd.starts_with("exit ") => handle_exit_command(cmd),
             cmd if cmd.starts_with("echo ") => handle_echo_command(cmd),
             cmd if cmd.starts_with("type ") => handle_type_command(cmd),
-            _ => handle_unknown_command(command),
+            _ => execute_command(&command),
         }
     }
 }
@@ -41,7 +39,7 @@ fn handle_exit_command(command: &str) {
     let parts: Vec<&str> = command.split_whitespace().collect();
     if parts.len() == 2 {
         if let Ok(code) = parts[1].parse::<i32>() {
-            process::exit(code);
+            std::process::exit(code);
         }
     }
     println!("Invalid exit command format");
@@ -72,7 +70,30 @@ fn handle_type_command(command: &str) {
     }
 }
 
-fn find_executable_in_path(command: &str) -> Option<PathBuf> {
+fn execute_command(command: &str) {
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    let program = parts[0];
+
+    if BUILTINS.contains(&program) {
+        println!("{} is a shell builtin", program);
+        return;
+    }
+
+    if let Some(path) = find_executable_in_path(program) {
+        let status = execute_external_command(&path, &parts[1..]);
+        if let Some(status) = status {
+            if !status.success() {
+                println!("Command failed with status: {}", status);
+            }
+        } else {
+            println!("Failed to execute command");
+        }
+    } else {
+        println!("{}: not found", program);
+    }
+}
+
+fn find_executable_in_path(command: &str) -> Option<std::path::PathBuf> {
     if let Some(paths) = env::var_os("PATH") {
         for path in env::split_paths(&paths) {
             let exe_path = path.join(command);
@@ -84,7 +105,7 @@ fn find_executable_in_path(command: &str) -> Option<PathBuf> {
     None
 }
 
-fn can_execute(path: &Path) -> bool {
+fn can_execute(path: &std::path::Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
 
     if let Ok(metadata) = path.metadata() {
@@ -95,6 +116,14 @@ fn can_execute(path: &Path) -> bool {
     }
 }
 
-fn handle_unknown_command(command: String) {
-    println!("{}: command not found", command);
+fn execute_external_command(
+    program: &std::path::Path,
+    args: &[&str],
+) -> Option<std::process::ExitStatus> {
+    let status = std::process::Command::new(program)
+        .args(args)
+        .status()
+        .expect("Failed to execute command");
+
+    Some(status)
 }

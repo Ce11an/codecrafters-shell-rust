@@ -1,4 +1,6 @@
+use std::env;
 use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 use std::process;
 
 const BUILTINS: [&str; 3] = ["echo", "exit", "type"];
@@ -54,13 +56,42 @@ fn handle_type_command(command: &str) {
     let parts: Vec<&str> = command.split_whitespace().collect();
     if parts.len() == 2 {
         let cmd_to_check = parts[1];
+
         if BUILTINS.contains(&cmd_to_check) {
             println!("{} is a shell builtin", cmd_to_check);
+            return;
+        }
+
+        if let Some(path) = find_executable_in_path(cmd_to_check) {
+            println!("{} is {}", cmd_to_check, path.display());
         } else {
             println!("{}: not found", cmd_to_check);
         }
     } else {
         println!("Invalid type command format");
+    }
+}
+
+fn find_executable_in_path(command: &str) -> Option<PathBuf> {
+    if let Some(paths) = env::var_os("PATH") {
+        for path in env::split_paths(&paths) {
+            let exe_path = path.join(command);
+            if exe_path.is_file() && can_execute(&exe_path) {
+                return Some(exe_path);
+            }
+        }
+    }
+    None
+}
+
+fn can_execute(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+
+    if let Ok(metadata) = path.metadata() {
+        let permissions = metadata.permissions();
+        permissions.mode() & 0o111 != 0
+    } else {
+        false
     }
 }
 

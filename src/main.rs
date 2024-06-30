@@ -1,7 +1,7 @@
 use std::env;
 use std::io::{self, Write};
 
-const BUILTINS: [&str; 3] = ["echo", "exit", "type"];
+const BUILTINS: [&str; 4] = ["echo", "exit", "type", "pwd"];
 
 fn main() {
     loop {
@@ -17,6 +17,7 @@ fn main() {
             cmd if cmd.starts_with("exit ") => handle_exit_command(cmd),
             cmd if cmd.starts_with("echo ") => handle_echo_command(cmd),
             cmd if cmd.starts_with("type ") => handle_type_command(cmd),
+            "pwd" => handle_pwd_command(),
             _ => execute_command(&command),
         }
     }
@@ -67,6 +68,18 @@ fn handle_type_command(command: &str) {
         }
     } else {
         println!("Invalid type command format");
+    }
+}
+
+fn handle_pwd_command() {
+    if let Ok(pwd) = env::current_dir() {
+        if let Some(pwd_str) = pwd.to_str() {
+            println!("{}", pwd_str);
+        } else {
+            eprintln!("Failed to get current directory path");
+        }
+    } else {
+        eprintln!("Failed to get current directory");
     }
 }
 
